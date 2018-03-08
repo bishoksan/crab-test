@@ -1010,7 +1010,7 @@ namespace crab {
                     this->_product.second()+=csts;
                     return;
                 }
-                if(csts.empty()){ //is true
+                if(csts.size()==0){ //is true
                     return;
                 }
                 CRAB_WARN("FIRST/SECOND/COND ", this->_product.first(), " / ", this->_product.second(), " / ", csts);
