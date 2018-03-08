@@ -1014,8 +1014,11 @@ namespace crab {
                     return;
                 }
                 //contains a single element and is tautology, means true
-                if(csts.size()==1 && *(csts.begin()).is_tautology()){
-                    return;
+                if (csts.size() == 1) {
+                    linear_constraint_t lc = *(csts.begin());
+                    if (lc.is_tautology()) {
+                        return;
+                    }
                 }
                 CRAB_WARN("FIRST/SECOND/COND ", this->_product.first(), " / ", this->_product.second(), " / ", csts);
                 wrap_cond_exprs(this->_product.first(), this->_product.second(), csts, is_singed); //makes second domain sound wrt modular arithmetic, so the following operation is sound
