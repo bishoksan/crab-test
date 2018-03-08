@@ -525,6 +525,10 @@ namespace crab {
                 //wrap rhs const and get a new system of constraints
                 linear_constraint_t new_lcs = wrap_rhs_and_get_new_constr(branch_cond, is_signed);
                 bool is_variable_lhs = lhs_branch_cond.is_variable();
+                bool is_const_lhs = lhs_branch_cond.is_constant();
+                if (is_const_lhs) {
+                    second += csts;
+                }
                 if (is_variable_lhs) {
                     CRAB_WARN(lhs_branch_cond, " is var ");
                     cond_wrap_var_SK(*(lhs_branch_cond.get_variable()), first, second, new_lcs, is_signed);
@@ -1002,6 +1006,13 @@ namespace crab {
             /*assume that the call to this operator is only coming from an assume  statement (branch/conditional)*/
             void operator+=(linear_constraint_system_t csts) {
                 bool is_singed = signed_world();
+                if(csts.is_false()){
+                    this->_product.second()+=csts;
+                    return;
+                }
+                if(csts.empty()){ //is true
+                    return;
+                }
                 CRAB_WARN("FIRST/SECOND/COND ", this->_product.first(), " / ", this->_product.second(), " / ", csts);
                 wrap_cond_exprs(this->_product.first(), this->_product.second(), csts, is_singed); //makes second domain sound wrt modular arithmetic, so the following operation is sound
                 this->_product.first() += csts;
