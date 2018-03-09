@@ -530,10 +530,10 @@ namespace crab {
                     second += csts;
                 }
                 if (is_variable_lhs) {
-                    CRAB_WARN(lhs_branch_cond, " is var ");
+                    //CRAB_WARN(lhs_branch_cond, " is var ");
                     cond_wrap_var_SK(*(lhs_branch_cond.get_variable()), first, second, new_lcs, is_signed);
                 } else {
-                    CRAB_WARN(lhs_branch_cond, " is expr ");
+                    //CRAB_WARN(lhs_branch_cond, " is expr ");
                     cond_wrap_expr_SK(new_lcs, first, second, is_signed);
                 }
             }
@@ -562,7 +562,7 @@ namespace crab {
              */
             void cond_wrap_var_SK(variable_t v, Domain1& first, Domain2& second, linear_constraint_t csts, bool is_signed) {
                 if (var_overflow(v, first, is_signed)) {
-                    CRAB_WARN("var ", v, " overflew");
+                    //CRAB_WARN("var ", v, " overflew");
                     //call wrapping since it overflows
                     //wrap_a_var_based_on_wrapped_interval(v, first, second, csts, is_signed);
                     wrap_single_var_SK(v, second, csts, is_signed);
@@ -578,7 +578,7 @@ namespace crab {
             std::vector<Domain2> cond_wrap_exprs_var(variable_t v, Domain1& first, Domain2& second, bool is_signed) {
                 std::vector<Domain2> dom2_elem;
                 if (var_overflow(v, first, is_signed)) {
-                    CRAB_WARN("var ", v, " overflew: cond_wrap_exprs_var");
+                    //CRAB_WARN("var ", v, " overflew: cond_wrap_exprs_var");
                     //call wrapping since it overflows
                     dom2_elem = wrap_var_SK_wo_adding_constrs(v, second, is_signed);
                 } else {
@@ -649,7 +649,7 @@ namespace crab {
                 linear_expression_t lhs = branch_cond.expression() + rhs;
 
                 if (expr_overflow(lhs, first, is_signed)) {
-                    CRAB_WARN("expr ", lhs, " overflew");
+                    //CRAB_WARN("expr ", lhs, " overflew");
                     variable_set_t lhs_vars = lhs.variables();
                     vector<Domain2> second_list;
                     second_list.push_back(second);
@@ -781,7 +781,7 @@ namespace crab {
              */
 
             void wrap_single_var_SK(variable_t var, Domain2& second, linear_constraint_system_t csts, bool is_signed, int threshold = 16) {
-                CRAB_WARN("wrap_single_var_SK CALLED, second ", second);
+                //CRAB_WARN("wrap_single_var_SK CALLED, second ", second);
                 bitwidth_t bit = var.get_bitwidth();
                 uint64_t modulo = get_modulo(bit);
                 int lower_quad_index, upper_quad_index;
@@ -789,23 +789,23 @@ namespace crab {
                 to_intervals<Domain2> inv2(second);
                 auto i_domain = inv2();
                 interval_t var_interval = i_domain[var];
-                CRAB_WARN("var-interval ", var, " -", var_interval);
+                //CRAB_WARN("var-interval ", var, " -", var_interval);
                 if (var_interval.lb().is_finite() && var_interval.ub().is_finite()) {
                     auto lb = *(var_interval.lb().number());
                     auto ub = *(var_interval.ub().number());
                     //compute the quadrants
                     lower_quad_index = (long(lb) - get_signed_min(bit)) / modulo;
                     upper_quad_index = (long(ub) - get_signed_min(bit)) / modulo;
-                    CRAB_WARN("lower index upper index ", lower_quad_index, " ", upper_quad_index);
+                    //CRAB_WARN("lower index upper index ", lower_quad_index, " ", upper_quad_index);
                 }
                 linear_constraint_system_t vars_bounds = get_var_bounds(var, is_signed);
 
                 if (!var_interval.lb().is_finite() || !var_interval.ub().is_finite() || (upper_quad_index - lower_quad_index) > threshold) {
-                    CRAB_WARN("one of the finiteness failed");
+                    //CRAB_WARN("one of the finiteness failed");
                     //project out var from the second domain and add variables bounds
-                    CRAB_WARN("second before proj ", second);
+                    //CRAB_WARN("second before proj ", second);
                     project_single_var<Domain2>(var, second);
-                    CRAB_WARN("second after proj ", second);
+                    //CRAB_WARN("second after proj ", second);
 
                     //conjoining variable bounds
                     second += vars_bounds;
@@ -815,16 +815,16 @@ namespace crab {
                     //shift and join quadrants
                     for (int i = lower_quad_index; i <= upper_quad_index; i++) {
                         Domain2 numerical_domain = second;
-                        CRAB_WARN("numerical  domain before replacement ", numerical_domain);
+                        //CRAB_WARN("numerical  domain before replacement ", numerical_domain);
                         numerical_domain = update_var_in_domain(numerical_domain, var, i, modulo);
-                        CRAB_WARN("after replacement ", numerical_domain);
+                        //CRAB_WARN("after replacement ", numerical_domain);
                         //meet,  
                         numerical_domain += vars_bounds;
                         numerical_domain += csts;
                         res |= numerical_domain; //join all the quadrants
                     }
                     second = res;
-                    CRAB_WARN("resulting wrap domain ", second);
+                    //CRAB_WARN("resulting wrap domain ", second);
                     // this->_product.second() = second;
 
                     return;
@@ -857,15 +857,15 @@ namespace crab {
                 //create a fresh variable, no need for a wrap-int variable since we are operating on domain2
                 variable_t var_new = create_fresh_int_var(var);
                 to_vars.push_back(var_new);
-                CRAB_WARN("about to rename ", var, " to ", var_new, " domain ", numerical_domain);
+                //CRAB_WARN("about to rename ", var, " to ", var_new, " domain ", numerical_domain);
                 numerical_domain.rename(frm_vars, to_vars);
-                CRAB_WARN("after renaming   domain ", numerical_domain);
+                //CRAB_WARN("after renaming   domain ", numerical_domain);
                 //expression to update var with
                 linear_expression_t modulo_expr(modulo);
                 linear_expression_t rhs_expr = quotient * modulo_expr;
                 rhs_expr = var_new - rhs_expr;
                 linear_constraint_t t = (var == rhs_expr);
-                CRAB_WARN("exprssion to update with ", t);
+                //CRAB_WARN("exprssion to update with ", t);
                 numerical_domain += (var == rhs_expr);
                 //project out var_new
                 return project_single_var<Domain2>(var_new, numerical_domain);
@@ -1020,13 +1020,13 @@ namespace crab {
                         return;
                     }
                 }
-                CRAB_WARN("FIRST/SECOND/COND ", this->_product.first(), " / ", this->_product.second(), " / ", csts);
+                //CRAB_WARN("FIRST/SECOND/COND ", this->_product.first(), " / ", this->_product.second(), " / ", csts);
                 wrap_cond_exprs(this->_product.first(), this->_product.second(), csts, is_singed); //makes second domain sound wrt modular arithmetic, so the following operation is sound
                 this->_product.first() += csts;
-                CRAB_WARN("FIRST/SECOND before reduce ", this->_product.first(), " / ", this->_product.second());
+                //CRAB_WARN("FIRST/SECOND before reduce ", this->_product.first(), " / ", this->_product.second());
 
                 reduce(is_singed);
-                CRAB_WARN("FIRST/SECOND after reduce ", this->_product.first(), " / ", this->_product.second());
+                //CRAB_WARN("FIRST/SECOND after reduce ", this->_product.first(), " / ", this->_product.second());
 
             }
 
