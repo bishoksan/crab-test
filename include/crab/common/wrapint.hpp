@@ -20,7 +20,7 @@ public:
   
 private:
   
-  int64_t _n;        // 0 <= _n <= 2^_width - 1
+  uint64_t _n;        // 0 <= _n <= 2^_width - 1
   bitwidth_t _width;  // 1 <= _width <= 64
   uint64_t _mod;      // 0 if _width=64 otherwise 2^_width
 
@@ -101,7 +101,7 @@ public:
 
   // return 1000....0
   static wrapint get_signed_min(bitwidth_t w) {
-    return wrapint(-(1 << (w-1)), w);
+    return wrapint(1 << (w-1), w);
   }
 
   // return 1111....1
