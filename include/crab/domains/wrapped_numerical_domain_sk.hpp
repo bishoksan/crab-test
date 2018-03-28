@@ -959,7 +959,7 @@ namespace crab {
                 this->_product.first() += csts;
             }
 
-            boolean is_signed_cmp(const linear_constraint_t & cst) {
+            bool is_signed_cmp(const linear_constraint_t & cst) {
                 bool is_singed = true; //default
                 if (cst.is_inequality() || cst.is_strict_inequality()) {
                     is_singed = cst.is_signed() ? true : false;
