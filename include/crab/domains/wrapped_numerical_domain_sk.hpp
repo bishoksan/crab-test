@@ -574,16 +574,16 @@ namespace crab {
                     vector<Domain2> second_list;
                     second_list.push_back(second);
                     //It is enough to wrap the whole expr, no need to wrap the ind. variables in it
-                    //vector<Domain2> res_vars_wrap = wrap_exprs_vars(from_var_set_t_2_vector(lhs_vars), first, second_list, is_signed);
+                    vector<Domain2> res_vars_wrap = wrap_exprs_vars(from_var_set_t_2_vector(lhs_vars), first, second_list, is_signed);
                     /**assuming well formed expressions, that is, all vars have the same bit-width in an expr
                      * */
                     variable_t var_new = create_fresh_wrapped_int_var(lhs);
-                    second_list = add_constrs_2_domains<Domain2>(second_list, (lhs == var_new));
+                    res_vars_wrap = add_constrs_2_domains<Domain2>(res_vars_wrap, (lhs == var_new));
                     //TODO: do a switch on kind of constraint and form var_new KIND constant
                     linear_expression_t new_lhs_branch_expr = var_new - rhs;
                     //FIXME:  do a case split on kind and produce a right expr
                     linear_constraint_t new_cond = linear_constraint_t(new_lhs_branch_expr, branch_cond.kind());
-                    second = wrap_var_in_all_domains<Domain2>(var_new, second_list, new_cond, is_signed);
+                    second = wrap_var_in_all_domains<Domain2>(var_new, res_vars_wrap, new_cond, is_signed);
                     std::vector<variable_t> artifical_vars;
                     artifical_vars.push_back(var_new);
                     crab::domains::domain_traits<Domain2>::forget(second,
