@@ -56,9 +56,7 @@ namespace crab {
             typedef wrapped_numerical_domain_sk<Domain1, Domain2> wrapped_numerical_domain_t;
 
         private:
-            //bitwidth_t DEFAULT_BIT_WIDTH = 32;
             domain_product2_t _product;
-#define signed_int
 
             wrapped_numerical_domain_sk(domain_product2_t product) : _product(product) {
             }
@@ -79,65 +77,6 @@ namespace crab {
                     return res;
                 }
             };
-
-            // reduce first from the second; and then reduce second from the first
-
-            void reduce(bool is_signed) {
-            }
-
-            //            void reduce(bool is_signed) {
-            //                Domain1 first = _product.first();
-            //                Domain2 second = _product.second();
-            //                //since reduce is called after rapping, if it is bottom, then the first also should be
-            //                /*
-            //                if (second.is_bottom()) {
-            //                    first += linear_constraint_t::get_false();
-            //                    _product.first() = first;
-            //                    return;
-            //                }
-            //                  */
-            //
-            //                if (first.is_bottom()) {
-            //                    second += linear_constraint_t::get_false();
-            //                    _product.second() = second;
-            //                    return;
-            //                }
-            //                /*
-            //                //reduce first using the second
-            //                CRAB_WARN(" FIRST/SECOND before reducing in reduce", first, "/  ", second);
-            //                linear_constraint_system_t csts = second.to_linear_constraint_system();
-            //                for (auto c : csts) {
-            //                    first += c;
-            //                }
-            //                //reduce second using the first
-            //                if (first.is_bottom()) {
-            //                    second += linear_constraint_t::get_false();
-            //                    _product.second() = second;
-            //                    _product.first() = first;
-            //                    return;
-            //                }
-            //                 */
-            //                vector <std::pair<variable_t, wrapped_interval_t>> wrapped_intervals = first.to_interval_set();
-            //                bool first_entry = true;
-            //                for (auto c : wrapped_intervals) {
-            //                    variable_t v = c.first;
-            //                    Domain2 acc = Domain2::bottom();
-            //                    vector<interval_t> intervals = from_wrapped_to_intervals(v, c.second, is_signed);
-            //                    for (auto i : intervals) {
-            //                        Domain2 temp = second;
-            //                        temp += from_interval_to_linear_constraints(v, i);
-            //                        if (first_entry) {
-            //                            acc = temp;
-            //                            first_entry = false;
-            //                        } else {
-            //                            acc |= temp; //join with the second
-            //                        }
-            //                    }
-            //                    second = second & acc;
-            //                }
-            //                _product.second() = second;
-            //                _product.first() = first;
-            //            }
 
             std::vector<interval_t> both_in_bound_math_ordered(number_t start, number_t end, bitwidth_t bit, bool is_signed) {
                 std::vector<interval_t> res;
@@ -372,18 +311,6 @@ namespace crab {
             }
 
             /*
-             returns true if is_signed is defined, false otherwise
-             */
-            bool signed_world() {
-#ifdef signed_int 
-                return true;
-#else
-
-                return false;
-#endif
-            }
-
-            /*
              returns true if the number is in  1-hemisphere
              */
 
@@ -509,15 +436,8 @@ namespace crab {
              * 
              * TODO: now the constraints are in  E <=n form, it needs extension to E1<= E2, wrapping of constant on rhs
              */
-            void wrap_cond_exprs(Domain1& first, Domain2& second, linear_constraint_system_t csts, bool is_signed) {
+            void wrap_cond_exprs(Domain1& first, Domain2& second, linear_constraint_t branch_cond, bool is_signed) {
                 if (second.is_bottom()) return;
-                if (csts.size() > 1) {
-                    CRAB_ERROR("The branch condition ", csts, "involves more than one constraint");
-                    return;
-                }
-                //get the first element, which is the one to be added after wrapping
-                linear_constraint_t branch_cond = *(csts.begin());
-
                 number_t rhs_const = branch_cond.constant();
                 //Given x+y<=1, expr is x+y-1 and const is 1
                 //the following is done to cope up with the normalisation of linear constraints
@@ -527,7 +447,7 @@ namespace crab {
                 bool is_variable_lhs = lhs_branch_cond.is_variable();
                 bool is_const_lhs = lhs_branch_cond.is_constant();
                 if (is_const_lhs) {
-                    second += csts;
+                    second += branch_cond;
                 }
                 if (is_variable_lhs) {
                     //CRAB_WARN(lhs_branch_cond, " is var ");
@@ -641,7 +561,7 @@ namespace crab {
             }
 
             /*wraps a branching condition if necessary, for now only the left cond
-             if the expression does overflow, then we also need to wrap the variables occurring in it; 
+             if the expression does overflow, then wrap the expression by assigning it to a var; 
              * otherwise no wrapping is needed
              */
             void cond_wrap_expr_SK(linear_constraint_t branch_cond, Domain1& first, Domain2& second, bool is_signed) {
@@ -653,16 +573,17 @@ namespace crab {
                     variable_set_t lhs_vars = lhs.variables();
                     vector<Domain2> second_list;
                     second_list.push_back(second);
-
-                    vector<Domain2> res_vars_wrap = wrap_exprs_vars(from_var_set_t_2_vector(lhs_vars), first, second_list, is_signed);
-
+                    //It is enough to wrap the whole expr, no need to wrap the ind. variables in it
+                    //vector<Domain2> res_vars_wrap = wrap_exprs_vars(from_var_set_t_2_vector(lhs_vars), first, second_list, is_signed);
+                    /**assuming well formed expressions, that is, all vars have the same bit-width in an expr
+                     * */
                     variable_t var_new = create_fresh_wrapped_int_var(lhs);
-                    res_vars_wrap = add_constrs_2_domains<Domain2>(res_vars_wrap, (lhs == var_new));
+                    second_list = add_constrs_2_domains<Domain2>(second_list, (lhs == var_new));
                     //TODO: do a switch on kind of constraint and form var_new KIND constant
                     linear_expression_t new_lhs_branch_expr = var_new - rhs;
                     //FIXME:  do a case split on kind and produce a right expr
                     linear_constraint_t new_cond = linear_constraint_t(new_lhs_branch_expr, branch_cond.kind());
-                    second = wrap_var_in_all_domains<Domain2>(var_new, res_vars_wrap, new_cond, is_signed);
+                    second = wrap_var_in_all_domains<Domain2>(var_new, second_list, new_cond, is_signed);
                     std::vector<variable_t> artifical_vars;
                     artifical_vars.push_back(var_new);
                     crab::domains::domain_traits<Domain2>::forget(second,
@@ -961,13 +882,20 @@ namespace crab {
             }
 
             void apply(operation_t op, variable_t x, variable_t y, variable_t z) {
-
+                if (op == OP_DIVISION) {
+                    // signed division
+                    safen(y, true);
+                    safen(z, true);
+                }
                 this->_product.apply(op, x, y, z);
 
             }
 
             void apply(operation_t op, variable_t x, variable_t y, number_t k) {
-
+                if (op == OP_DIVISION) {
+                    // signed division
+                    safen(y, true);
+                }
                 this->_product.apply(op, x, y, k);
 
             }
@@ -1005,12 +933,13 @@ namespace crab {
 
             /*assume that the call to this operator is only coming from an assume  statement (branch/conditional)*/
             void operator+=(linear_constraint_system_t csts) {
-                bool is_singed = signed_world();
-                if(csts.is_false()){
-                    this->_product.second()+=csts;
+                //bool is_singed = signed_world();
+                if (csts.is_false()) {
+                    this->_product.second() += csts;
+                    this->_product.first() += csts;
                     return;
                 }
-                if(csts.size()==0){ //is true
+                if (csts.size() == 0) { //is true
                     return;
                 }
                 //contains a single element and is tautology, means true
@@ -1020,14 +949,34 @@ namespace crab {
                         return;
                     }
                 }
-                //CRAB_WARN("FIRST/SECOND/COND ", this->_product.first(), " / ", this->_product.second(), " / ", csts);
-                wrap_cond_exprs(this->_product.first(), this->_product.second(), csts, is_singed); //makes second domain sound wrt modular arithmetic, so the following operation is sound
+                for (auto cst : csts) {
+                    //ignore unsigned comparisons from the unsound domain
+                    if (!(cst.is_inequality() && cst.is_unsigned())) {
+                        bool is_singed = is_signed_cmp(cst);
+                        wrap_cond_exprs(this->_product.first(), this->_product.second(), cst, is_singed); //makes second domain sound wrt modular arithmetic, so the following operation is sound
+                    }
+                }
                 this->_product.first() += csts;
-                //CRAB_WARN("FIRST/SECOND before reduce ", this->_product.first(), " / ", this->_product.second());
+            }
 
-                reduce(is_singed);
-                //CRAB_WARN("FIRST/SECOND after reduce ", this->_product.first(), " / ", this->_product.second());
+            boolean is_signed_cmp(const linear_constraint_t & cst) {
+                bool is_singed = true; //default
+                if (cst.is_inequality() || cst.is_strict_inequality()) {
+                    is_singed = cst.is_signed() ? true : false;
+                }
+                return is_singed;
+            }
 
+            /** Basically forgets variable v from the unsound domain 
+             * if the wrapped interval cannot deduce non-overflow 
+             This is only applied to those operations that does not commute with the modulo
+              (branches, div, and rem).
+             * */
+
+            void safen(const variable_t& v, bool is_signed) {
+                if (var_overflow(v, _product.first(), is_signed)) {
+                    _product.second() -= v;
+                }
             }
 
             void operator-=(variable_t v) {
@@ -1060,13 +1009,24 @@ namespace crab {
             // division_operators_api
 
             void apply(div_operation_t op, variable_t x, variable_t y, variable_t z) {
-
-                this->_product.apply(op, x, y, z);
+                safen(y, (op == OP_SDIV || op == OP_SREM) ? true : false);
+                safen(z, (op == OP_SDIV || op == OP_SREM) ? true : false);
+                if (op == OP_UDIV || op == OP_UREM) {
+                    // if unsigned division then we only apply it on wrapped intervals
+                    _product.first().apply(op, x, y, z);
+                } else {
+                    _product.apply(op, x, y, z);
+                }
             }
 
             void apply(div_operation_t op, variable_t x, variable_t y, number_t k) {
-
-                this->_product.apply(op, x, y, k);
+                safen(y, (op == OP_SDIV || op == OP_SREM) ? true : false);
+                if (op == OP_UDIV || op == OP_UREM) {
+                    // if unsigned division then we only apply it on wrapped intervals
+                    _product.first().apply(op, x, y, k);
+                } else {
+                    _product.apply(op, x, y, k);
+                }
 
             }
 
