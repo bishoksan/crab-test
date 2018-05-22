@@ -394,8 +394,15 @@ namespace crab {
                 return bound_vec;
             }
 
-            /*return true if overflows*/
+            /*always overflows for Simon and King*/
             bool expr_overflow(linear_expression_t lhs, const Domain1& first, bool is_signed) {
+                return true;
+            }
+
+            /*return true if overflows, this is a generic method*/
+            /*
+             * 
+               bool expr_overflow(linear_expression_t lhs, const Domain1& first, bool is_signed) {
                 //should not modify first, take a copy
                 Domain1 first_ref = first;
                 variable_t var_new = create_fresh_wrapped_int_var(lhs);
@@ -403,8 +410,6 @@ namespace crab {
                 //return true; //expressions are always wrapped
                 return var_overflow(var_new, first_ref, is_signed);
             }
-
-            /*return true if overflows*/
             bool var_overflow(variable_t var, Domain1& first, bool is_signed) {
                 if (first.is_bottom()) {
                     return false; //assume nothing will overflow
@@ -423,6 +428,15 @@ namespace crab {
 
                 if (limit_val_domain.is_crossing_unsigned_limit() && !is_signed) {
                     return true;
+                }
+                return false;
+            }
+             */
+
+            /*method tuned for Simon and King, it always overflows*/
+            bool var_overflow(variable_t var, Domain1& first, bool is_signed) {
+                if (first.is_bottom()) {
+                    return false; //assume nothing will overflow
                 }
                 return false;
             }
